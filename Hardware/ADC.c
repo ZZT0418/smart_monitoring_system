@@ -145,27 +145,73 @@ float Calculate_Light_Lux(uint16_t light_adc)
     return lux;
 }
 
-// ===================== 新增：ADC滤波函数（核心解决跳变） =====================
+// // ===================== 新增：ADC滤波函数（核心解决跳变） =====================
+// /**
+//  * @brief  读取滤波后的ADC值（平均值滤波，稳定光照/温度值）
+//  * @param  ADC_Channel: 通道号（ADC_Channel_0=光照，ADC_Channel_1=温度）
+//  * @param  sample_num: 采样次数（推荐10次，兼顾稳定和响应速度）
+//  * @retval 滤波后的ADC平均值
+//  */
+// uint16_t ADC_GetFilterValue(uint8_t ADC_Channel, uint8_t sample_num)
+// {
+//     uint32_t sum = 0;
+//     // 采集多次ADC值，累加求和
+//     for(uint8_t i=0; i<sample_num; i++)
+//     {
+//         sum += ADC_GetValue(ADC_Channel);
+//         // 短延时，避免采样过快导致数据重复
+//         for(uint16_t j=0; j<200; j++);
+//     }
+//     // 返回平均值（核心：用多次平均抵消单次跳变）
+//     return sum / sample_num;
+// }
+
+// ===================== 一阶滞后滤波（一阶指数滤波）ADC读取函数 =====================
 /**
- * @brief  读取滤波后的ADC值（平均值滤波，稳定光照/温度值）
+ * @brief  读取一阶滤波后的ADC值（稳定光照/温度，无数组、更平滑）
  * @param  ADC_Channel: 通道号（ADC_Channel_0=光照，ADC_Channel_1=温度）
- * @param  sample_num: 采样次数（推荐10次，兼顾稳定和响应速度）
- * @retval 滤波后的ADC平均值
+ * @param  sample_num: 采样次数（多次采样求平均后再滤波，更稳定）
+ * @retval 一阶滤波后的ADC值
  */
+//一阶指数滤波 = 让新数据慢慢靠近旧数据，让曲线变顺滑，消除跳变。
 uint16_t ADC_GetFilterValue(uint8_t ADC_Channel, uint8_t sample_num)
 {
+    static uint16_t last_adc[2] = {0};  // 保存上一次滤波值：[0]光照 [1]温度
+    static uint8_t first_run[2] = {1, 1}; // 标记是否第一次运行
     uint32_t sum = 0;
-    // 采集多次ADC值，累加求和
+    float a;                             // 滤波系数
+    uint16_t new_val, filter_val;
+
+    // 1. 多次采样 → 求原始平均值
     for(uint8_t i=0; i<sample_num; i++)
     {
         sum += ADC_GetValue(ADC_Channel);
-        // 短延时，避免采样过快导致数据重复
-        for(uint16_t j=0; j<200; j++);
+        for(uint16_t j=0; j<200; j++);   // 简单延时
     }
-    // 返回平均值（核心：用多次平均抵消单次跳变）
-    return sum / sample_num;
-}
+    new_val = sum / sample_num;          // 原始稳定采样值
 
+    // ===================== 第一次不滤波：静态变量初始为 0，导致第一次输出跳变巨大 =====================
+    if(first_run[ADC_Channel] == 1)
+    {
+        first_run[ADC_Channel] = 0;
+        last_adc[ADC_Channel] = new_val;
+        return new_val;
+    }
+
+    // 2. 根据通道选择滤波系数（温度更平滑，光照稍灵敏）
+    if(ADC_Channel == 0)    // 光照：系数稍大，响应快
+        a = 0.1f;
+    else                    // 温度：系数小，超平滑
+        a = 0.05f;
+
+    // 3. 一阶滞后滤波核心公式：新滤波值 = 旧值 × (1 - 系数) + 本次采集值 × 系数
+    filter_val = (uint16_t)(last_adc[ADC_Channel] * (1 - a) + new_val * a);
+
+    // 4. 更新上一次值
+    last_adc[ADC_Channel] = filter_val;
+
+    return filter_val;
+}
 
 
 

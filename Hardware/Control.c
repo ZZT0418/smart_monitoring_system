@@ -13,7 +13,7 @@ void PWM_Init(void)
     //2.使能定时器3的时钟并初始化
     //TIM3 的基础时钟 = 72MHz（APB1 总线时钟 ×2）
     //PWM 频率 = 72MHz / (PSC+1) / (ARR+1) = 72MHz / 7200 / 100 = 100Hz= 10ms周期
-    //占空比 = CCR / (ARR+1) = CCR / 100，范围0-100%，对应CCR1值0-100
+    //占空比 = CCR / (ARR+1) = CCR / 100，范围0-100%，对应CCR1捕获/比较寄存器的值0-100
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE); // 使能定时器3的时钟
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;//表示定时器时钟不分频

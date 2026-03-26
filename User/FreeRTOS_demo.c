@@ -156,11 +156,12 @@ void adc_task(void *pvParameters)
 
  }
 
-//============================ 报警任务函数 ==================================
-/* 功能：1. 接收ADC数据，根据采集的光照与温度数据进行判断，若光照过强或温度过高则点亮LED与蜂鸣器报警;
-       2. 接收红外传感器数据，若检测到有障碍物则触发LED与蜂鸣器报警。*/
-// 参数：void *pvParameters
-// 返回值：无
+/*=================================== 报警任务函数 ==========================================
+*功能：1. 接收ADC数据，根据采集的光照与温度数据进行判断，若光照过强或温度过高则点亮LED与蜂鸣器报警;
+        2. 接收红外传感器数据，若检测到有障碍物则触发LED与蜂鸣器报警。
+*参数：void *pvParameters
+*返回值：无
+*/ 
 void alarm_task(void *pvParameters)
 {
     ADCData_t local_data;  // 使用局部变量接收队列数据
@@ -311,39 +312,34 @@ void usart_task(void *pvParameters)
                         // 根据命令执行操作
                         if (strcmp(command, "ALARM") == 0)
                         {
-														switch(param)
-														{
-															case 0:
-																				LED1_OFF();
-																				Buzzer_OFF();
-																		break;
-															
-															case 1:
-																				LED1_ON();
-																				Buzzer_ON();
-																		break;
-															case 2:
-                                        LED1_ON();
-																				Buzzer_ON();
-																		break;
-															case 3:
-																				LED1_ON();
-																				Buzzer_ON();
-																		break;
-															default:
-																break;
-																
-															
-														}
+							switch(param)
+							{
+								case 0:
+									LED1_OFF();
+									Buzzer_OFF();
+									break;						
+								case 1:
+									LED1_ON();
+									Buzzer_ON();
+									break;
+								case 2:
+                                    LED1_ON();
+									Buzzer_ON();
+									break;
+								case 3:
+									LED1_ON();
+									Buzzer_ON();
+									break;
+								default:
+									break;
+							}
                         }
                         else if (strcmp(command, "MOTOR") == 0)
                         {
-                            if (param==1)
-                            {
+                            if (param==1){
                                 Motor_Forward(50);
                             }
-                            else if (param==0)
-                            {
+                            else if (param==0){
                                 Motor_Stop();
                             }
                         }
@@ -366,6 +362,5 @@ void usart_task(void *pvParameters)
         }
         // 简单延时，避免任务空转
         vTaskDelay(pdMS_TO_TICKS(100));
-
 	}
 }

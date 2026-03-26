@@ -17,11 +17,5 @@ int main(void)
 	Control_Init();
 	FreeRTOS_Start();
 	
-
-	while (1)
-	{
-
-
-	}
 	
 }
