@@ -1,7 +1,8 @@
 .\objects\key.o: Hardware\Key.c
+.\objects\key.o: Hardware\Key.h
+.\objects\key.o: E:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\key.o: .\Start\stm32f10x.h
 .\objects\key.o: .\Start\core_cm3.h
-.\objects\key.o: E:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\key.o: .\Start\system_stm32f10x.h
 .\objects\key.o: .\User\stm32f10x_conf.h
 .\objects\key.o: .\Library\stm32f10x_adc.h
@@ -28,6 +29,7 @@
 .\objects\key.o: .\Library\stm32f10x_usart.h
 .\objects\key.o: .\Library\stm32f10x_wwdg.h
 .\objects\key.o: .\Library\misc.h
+.\objects\key.o: Hardware\Led.h
 .\objects\key.o: .\FreeRTOS\inc\FreeRTOS.h
 .\objects\key.o: E:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 .\objects\key.o: .\FreeRTOS\FreeRTOSConfig.h
@@ -38,3 +40,5 @@
 .\objects\key.o: .\FreeRTOS\inc\mpu_wrappers.h
 .\objects\key.o: .\FreeRTOS\inc\task.h
 .\objects\key.o: .\FreeRTOS\inc\list.h
+.\objects\key.o: .\FreeRTOS\inc\queue.h
+.\objects\key.o: .\FreeRTOS\inc\semphr.h

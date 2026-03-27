@@ -14,9 +14,6 @@
 .\objects\freertos_demo.o: .\FreeRTOS\inc\semphr.h
 .\objects\freertos_demo.o: .\Hardware\Led.h
 .\objects\freertos_demo.o: .\Hardware\Key.h
-.\objects\freertos_demo.o: .\Hardware\Usart.h
-.\objects\freertos_demo.o: .\Hardware\Buzzer.h
-.\objects\freertos_demo.o: .\Hardware\OLED.h
 .\objects\freertos_demo.o: .\Start\stm32f10x.h
 .\objects\freertos_demo.o: .\Start\core_cm3.h
 .\objects\freertos_demo.o: .\Start\system_stm32f10x.h
@@ -45,6 +42,9 @@
 .\objects\freertos_demo.o: .\Library\stm32f10x_usart.h
 .\objects\freertos_demo.o: .\Library\stm32f10x_wwdg.h
 .\objects\freertos_demo.o: .\Library\misc.h
+.\objects\freertos_demo.o: .\Hardware\Usart.h
+.\objects\freertos_demo.o: .\Hardware\Buzzer.h
+.\objects\freertos_demo.o: .\Hardware\OLED.h
 .\objects\freertos_demo.o: .\Hardware\ADC.h
 .\objects\freertos_demo.o: .\Hardware\Redsensor.h
 .\objects\freertos_demo.o: .\Hardware\Control.h

@@ -21,6 +21,15 @@ QueueHandle_t  xQueue_AdcData_Display = NULL;   // ADC数据队列 — 显示任务使用
 QueueHandle_t  xQueue_AdcData_Alarm = NULL;     // ADC数据队列 — 报警任务使用
 QueueHandle_t  xQueue_AdcData_Usart = NULL;    // ADC数据队列 — USART任务使用
 
+// 添加USART1接收队列句柄
+QueueHandle_t xQueue_Usart1Rx = NULL;    
+
+// 添加全局变量
+static volatile uint8_t display_enabled = 1; // 1=显示开启, 0=显示关闭
+static uint32_t last_display_time = 0;       // 上一次显示的时间
+// 按键信号信号量句柄
+xSemaphoreHandle xKeySemaphore;
+
 // 定义ADC采集数据结构体，接收端一次接收就是一个完整的数据对，避免了数据错乱和需要两次接收的问题。
 typedef struct
 {
@@ -60,6 +69,12 @@ void display_task(void *pvParameters);
 TaskHandle_t usart_task_handle;
 void usart_task(void *pvParameters);
 
+// 按键任务配置
+#define KEY_TASK_STACK 256
+#define KEY_TASK_PRIORITY 3
+TaskHandle_t key_task_handle;
+void key_task(void *pvParameters);
+
 
 //====================== 启动FreeRTOS函数 ===================//
 void FreeRTOS_Start(void)
@@ -90,6 +105,10 @@ void start_task(void *pvParameters)
     xQueue_AdcData_Display = xQueueCreate(10, sizeof(ADCData_t)); // ADC数据队列（显示）
     xQueue_AdcData_Alarm = xQueueCreate(10, sizeof(ADCData_t));   // ADC数据队列（报警）
     xQueue_AdcData_Usart = xQueueCreate(10, sizeof(ADCData_t));  // ADC数据队列（USART）
+     // 创建USART接收队列
+    xQueue_Usart1Rx = xQueueCreate(64, sizeof(uint8_t)); // 64字节缓冲区
+    // 创建信号量
+    xKeySemaphore = xSemaphoreCreateBinary();
 
 	// 创建其它的5个任务
 		xTaskCreate( (TaskFunction_t) alarm_task,
@@ -117,6 +136,12 @@ void start_task(void *pvParameters)
                (void * ) NULL,
                (UBaseType_t) USART_TASK_PRIORITY,
                (TaskHandle_t * )&usart_task_handle );
+        xTaskCreate( (TaskFunction_t) key_task,
+               (char *) "key_task",
+               (configSTACK_DEPTH_TYPE) KEY_TASK_STACK,
+               (void * ) NULL,
+               (UBaseType_t) KEY_TASK_PRIORITY,
+               (TaskHandle_t * )&key_task_handle );
 
     // 删除启动任务自己
 		vTaskDelete(NULL);
@@ -151,7 +176,9 @@ void adc_task(void *pvParameters)
         xQueueSend(xQueue_AdcData_Display, &adc_data, 0);
         xQueueSend(xQueue_AdcData_Alarm, &adc_data, 0);
         xQueueSend(xQueue_AdcData_Usart, &adc_data, 0);
-        vTaskDelay(pdMS_TO_TICKS(100));                               // 延时100ms，周期性采集
+        //新增：低功耗设计，降低上报频率
+        // vTaskDelay(pdMS_TO_TICKS(100));  
+        vTaskDelay(pdMS_TO_TICKS(1000));                               //周期性采集上报
 	}
 
  }
@@ -237,21 +264,28 @@ void alarm_task(void *pvParameters)
 // 返回值：无
 void display_task(void *pvParameters)
 {
-	while(1)
-	{
-    // 从显示队列接收ADC数据，阻塞等待直到有数据可用
-    if(xQueueReceive(xQueue_AdcData_Display, &adc_data, portMAX_DELAY) == pdPASS)
+    //新增：低功耗设计，5s无操作关闭显示，后续可通过按键唤醒
+    const uint32_t display_timeout = 30000; // 30秒超时
+    ADCData_t latest_adc_data;
+    
+    while(1)
     {
-        
-        // 将光照强度和温度数据显示在OLED屏幕上
-        float lux = Calculate_Light_Lux(adc_data.adc_light);                   // 将ADC光照值转换为实际光照强度
-        float temperature = Calculate_Temperature(adc_data.adc_temperature);   // 将ADC温度值转换为实际温度值
-        uint16_t lux_int = (uint16_t)lux;
-        uint16_t lux_dec = (uint16_t)((lux - lux_int) * 10);
-        uint8_t temp_int = (uint8_t)temperature;
-        uint8_t temp_dec = (uint8_t)((temperature - temp_int) * 10);
+        // 尝试从队列获取最新的ADC数据（非阻塞）
+        if(xQueueReceive(xQueue_AdcData_Display, &latest_adc_data, 0) == pdPASS)
+        {
+            // 更新最新数据，但不一定立即显示
+            adc_data = latest_adc_data;
+        }
+        // 如果显示已启用，则更新显示
+        if(display_enabled)
+        {
+            float lux = Calculate_Light_Lux(adc_data.adc_light);
+            float temperature = Calculate_Temperature(adc_data.adc_temperature);
+            uint16_t lux_int = (uint16_t)lux;
+            uint16_t lux_dec = (uint16_t)((lux - lux_int) * 10);
+            uint8_t temp_int = (uint8_t)temperature;
+            uint8_t temp_dec = (uint8_t)((temperature - temp_int) * 10);
 
-            // OLED_Clear(); // 清屏并更新显示，会出现屏幕闪烁，故去掉清屏操作，直接覆盖显示内容
             OLED_ShowCN(1, 1, 0, 1); // 显示汉字"光"
             OLED_ShowCN(1, 2, 1, 1); // 显示汉字"照"
             OLED_ShowCN(1, 3, 2, 1); // 显示汉字"强"
@@ -270,10 +304,23 @@ void display_task(void *pvParameters)
             OLED_ShowCN(4, 4, 5, 1); // 显示汉字"摄"
             OLED_ShowCN(4, 5, 6, 1); // 显示汉字"氏"
             OLED_ShowCN(4, 6, 3, 1); // 显示汉字"度"
-            // 释放OLED显示互斥量，允许其他任务访问OLED显示资源
-            vTaskDelay(pdMS_TO_TICKS(100)); // 每100ms更新一次显示
+            
+            // 规定时间无操作则关闭显示
+            if(((xTaskGetTickCount() - last_display_time) > display_timeout))
+            {
+                // 超时，关闭显示
+                OLED_Clear();
+                display_enabled = 0;
+            }
+        }
+        else
+        {
+            OLED_Clear();
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(100)); // 每100ms检查一次
     }
-	}
+
 
 }
 
@@ -284,16 +331,15 @@ void display_task(void *pvParameters)
 // 返回值：无
 void usart_task(void *pvParameters)
 {
-	      uint8_t rx_buf[64];     //用来接收一个字节数据；缓冲区是64 个 8 位无符号整数组成的缓冲区，最多存63个有效字符（留1位给结束符）
+	    uint8_t rx_buf[64];     //用来接收一个字节数据；缓冲区是64 个 8 位无符号整数组成的缓冲区，最多存63个有效字符（留1位给结束符）
         uint16_t index = 0;    // 缓冲区写入索引，记录当前已接收字符数
         uint8_t ch;            // 临时存储单次接收的字节
 	while(1)
 	{
 
         // 从串口接收数据，阻塞等待直到有数据可用
-        if(USART_GetFlagStatus(USART1, USART_FLAG_RXNE)==SET)
+        if(xQueueReceive(xQueue_Usart1Rx, &ch, portMAX_DELAY) == pdPASS)
         {
-            ch = USART_ReceiveData(USART1); // 从USART1接收一个字节数据
             if (ch == '\n' && index > 0)   // 如果接收的字节是换行符，并且缓冲区有数据
             {
                 // 收到换行，认为一帧结束
@@ -360,7 +406,25 @@ void usart_task(void *pvParameters)
                 index = 0;
             }
         }
-        // 简单延时，避免任务空转
-        vTaskDelay(pdMS_TO_TICKS(100));
+        // 不再需要轮询延时，任务会在队列接收时自动阻塞
+        // vTaskDelay(pdMS_TO_TICKS(100));
 	}
+}
+
+void key_task(void *pvParameters)
+{
+    while(1)
+    {
+        // 等待中断信号
+        if(xSemaphoreTake(xKeySemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ======================
+            // 按键按下，执行你的代码
+            // ======================
+            // 按键被按下，启用显示
+            LED2_Turn();
+            display_enabled = 1;
+            last_display_time = xTaskGetTickCount();
+        }
+    }
 }

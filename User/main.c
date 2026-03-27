@@ -1,5 +1,6 @@
 #include "stm32f10x.h"                  // Device header
 #include "Led.h"
+#include "Key.h"
 #include "Buzzer.h"
 #include "ADC.h"
 #include "OLED.h"
@@ -7,9 +8,11 @@
 #include "Control.h"
 #include "FreeRTOS_demo.h"
 
+
 int main(void)
 {
 	LED_Init();
+	KEY_Init();
 	Buzzer_Init();
 	My_ADC_Init();
 	OLED_Init();

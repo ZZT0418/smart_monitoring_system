@@ -29,6 +29,7 @@
 .\objects\main.o: .\Library\stm32f10x_wwdg.h
 .\objects\main.o: .\Library\misc.h
 .\objects\main.o: .\Hardware\Led.h
+.\objects\main.o: .\Hardware\Key.h
 .\objects\main.o: .\Hardware\Buzzer.h
 .\objects\main.o: .\Hardware\ADC.h
 .\objects\main.o: .\Hardware\OLED.h

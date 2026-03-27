@@ -5,7 +5,7 @@
 void LED_Init(void)
 {
 	//开启GPIOA时钟
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC, ENABLE);
 	
 	//声明结构体变量
 	GPIO_InitTypeDef GPIO_InitStructure;
@@ -14,9 +14,17 @@ void LED_Init(void)
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;	
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+	//配置GPIO,给变量成员赋值
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;	
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+
 	
 	//默认给高电平关闭LED
 	GPIO_SetBits(GPIOB, GPIO_Pin_12);
+	GPIO_SetBits(GPIOC, GPIO_Pin_13);
 	
 }
 
@@ -45,29 +53,29 @@ void LED1_Turn(void)
 	}
 }
 
-// void LED2_ON(void)
-// {
-// 	GPIO_ResetBits(GPIOA, GPIO_Pin_1);
-// }
+void LED2_ON(void)
+{
+	GPIO_ResetBits(GPIOC, GPIO_Pin_13);
+}
 
-// void LED2_OFF(void)
-// {
-// 	GPIO_SetBits(GPIOA, GPIO_Pin_1);
-// }
+void LED2_OFF(void)
+{
+	GPIO_SetBits(GPIOC, GPIO_Pin_13);
+}
 
-// /*=============LED2灯状态反转函数==============*/
-// void LED2_Turn(void)
-// {
-// 	//同理LED1
-// 	if (GPIO_ReadOutputDataBit(GPIOA, GPIO_Pin_1) == 0)
-// 	{
-// 		GPIO_SetBits(GPIOA, GPIO_Pin_1);
-// 	}
-// 	else
-// 	{
-// 		GPIO_ResetBits(GPIOA, GPIO_Pin_1);
-// 	}
-// }
+/*=============LED2灯状态反转函数==============*/
+void LED2_Turn(void)
+{
+	//同理LED1
+	if (GPIO_ReadOutputDataBit(GPIOC, GPIO_Pin_13) == 0)
+	{
+		GPIO_SetBits(GPIOC, GPIO_Pin_13);
+	}
+	else
+	{
+		GPIO_ResetBits(GPIOC, GPIO_Pin_13);
+	}
+}
 
 
 

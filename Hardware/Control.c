@@ -1,5 +1,13 @@
 #include "stm32f10x.h"
 
+// 添加一个函数来检查定时器是否启用
+static uint8_t Is_TIM3_Enabled(void)
+{
+    // 检查TIM3的CR1寄存器中的CEN位（第0位）
+    // 如果CEN=1，表示定时器已启用
+    return (TIM3->CR1 & TIM_CR1_CEN) ? 1 : 0;
+}
+
 void PWM_Init(void)
 {
     //1.使能GPIOA的时钟并初始化PA6引脚为复用推挽输出，用于定时器3的通道1输出PWM信号控制电机转速
@@ -62,6 +70,10 @@ void Motor_Reverse(uint8_t speed)
     if(speed > 100) speed = 100; // 限制速度值在0-100范围内
     uint16_t pulse = (speed * 100) / 100; // 将速度值转换为占空比对应的脉冲值，定时器周期为99，所以占空比为pulse/100
     TIM_SetCompare1(TIM3, pulse); // 设置定时器3的通道1的比较寄存器值，更新占空比
+    // 如果定时器已关闭，重新启用
+    if (!Is_TIM3_Enabled()) {
+        TIM_Cmd(TIM3, ENABLE);
+    }
     // 设置PB13和PB14引脚状态，根据需要控制电机正转或反转，这里假设正转为PB13高电平，PB14低电平
     GPIO_ResetBits(GPIOB, GPIO_Pin_13); // PB13低电平
     GPIO_SetBits(GPIOB, GPIO_Pin_14); // PB14高电平
@@ -74,6 +86,9 @@ void Motor_Stop(void)
     // 设置PB13和PB14引脚状态，停止电机，这里假设停止为PB13和PB14都为低电平
     GPIO_ResetBits(GPIOB, GPIO_Pin_13); // PB13低电平
     GPIO_ResetBits(GPIOB, GPIO_Pin_14); // PB14低电平
+
+    //新增：低功耗，电机停止时关闭定时器
+    TIM_Cmd(TIM3, DISABLE);
 }
 
 //===================电机正转函数===================//
@@ -84,6 +99,10 @@ void Motor_Forward(uint8_t speed)
 {
     if(speed > 100) speed = 100; // 限制速度值在0-100范围内
     uint16_t pulse = (speed * 100) / 100; // 将速度值转换为占空比对应的脉冲值，定时器周期为99，所以占空比为pulse/100
+    // 如果定时器已关闭，重新启用
+    if (!Is_TIM3_Enabled()) {
+        TIM_Cmd(TIM3, ENABLE);
+    }
     TIM_SetCompare1(TIM3, pulse); // 设置定时器3的通道1的比较寄存器值，更新占空比
     // 设置PB13和PB14引脚状态，正转电机，这里假设正转为PB13高电平，PB14低电平
     GPIO_SetBits(GPIOB, GPIO_Pin_13); // PB13高电平
